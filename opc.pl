@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+# vim: expandtab ts=2 sw=2
 
 use warnings;
 use strict;
@@ -13,5 +14,4 @@ my $socket = IO::Socket::UNIX->new(
 );
 
 print $socket join(' ', @ARGV);
-
 
