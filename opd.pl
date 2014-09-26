@@ -38,7 +38,9 @@ while(1) {
       open($player, "|omxplayer -o hdmi $1")  || die "couldn't start omxplayer";
       $player->autoflush();
     } elsif($line =~ /^KEY (p|q)/) {
-      print $player $1;
+      if($player) {
+      	print $player $1;
+      }
       if($1 eq 'q') {
         quitPlayer;
       }
