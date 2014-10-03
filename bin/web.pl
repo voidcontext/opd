@@ -6,24 +6,15 @@ use Mojolicious::Lite;
 use JSON::PP;
 use File::Slurp;
 
-use IO::Handle;
-use IO::Socket::UNIX;
+use FindBin;
+use lib "$FindBin::Bin/../lib";
 
-my $SOCK_PATH = '/tmp/opd.sock';
-
-sub getSocket {
-  my $socket = IO::Socket::UNIX->new(
-    Type => SOCK_STREAM,
-    Peer => $SOCK_PATH,
-  );
-  $socket->autoflush();
-
-  return $socket;
-}
-
+use OmxplayerClient;
 
 my $json = read_file('config.json');
 my $config = decode_json($json);
+
+my $client = new OmxplayerClient;
 
 # Documentation browser under "/perldoc"
 plugin 'PODRenderer';
@@ -39,11 +30,11 @@ get '/' => sub {
 
 get '/play' => sub {
   my $c = shift;
-  my $socket = getSocket();
   my $id = $c->param('id');
   my @files = qx{find $config->{root} -regextype posix-egrep -iregex '.*(mkv|avi)\$'};
 
-  print $socket "OPEN " . $files[$id] . "\n";
+  $client->open($files[$id]);
+
   $c->redirect_to('/playing');
 };
 
@@ -54,17 +45,15 @@ get '/playing' => sub {
 
 get '/pp' => sub {
   my $c = shift;
-  my $socket = getSocket();
   
-  print $socket "KEY p\n";
+  $client->playPause();
   $c->redirect_to('/playing');
 };
 
 get '/quit' => sub {
   my $c = shift;
-  my $socket = getSocket();
 
-  print $socket "KEY q\n";
+  $client->quit();
   $c->redirect_to('/');
 };
 
