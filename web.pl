@@ -1,4 +1,6 @@
 #!/usr/bin/env perl
+# vim: expandtab ts=2 sw=2
+
 use Mojolicious::Lite;
 
 use JSON::PP;
@@ -9,11 +11,16 @@ use IO::Socket::UNIX;
 
 my $SOCK_PATH = '/tmp/opd.sock';
 
-my $socket = IO::Socket::UNIX->new(
-  Type => SOCK_STREAM,
-  Peer => $SOCK_PATH,
-);
-$socket->autoflush();
+sub getSocket {
+  my $socket = IO::Socket::UNIX->new(
+    Type => SOCK_STREAM,
+    Peer => $SOCK_PATH,
+  );
+  $socket->autoflush();
+
+  return $socket;
+}
+
 
 my $json = read_file('config.json');
 my $config = decode_json($json);
@@ -32,6 +39,7 @@ get '/' => sub {
 
 get '/play' => sub {
   my $c = shift;
+  my $socket = getSocket();
   my $id = $c->param('id');
   my @files = qx{find $config->{root} -regextype posix-egrep -iregex '.*(mkv|avi)\$'};
 
@@ -46,6 +54,7 @@ get '/playing' => sub {
 
 get '/pp' => sub {
   my $c = shift;
+  my $socket = getSocket();
   
   print $socket "KEY p\n";
   $c->redirect_to('/playing');
@@ -53,6 +62,7 @@ get '/pp' => sub {
 
 get '/quit' => sub {
   my $c = shift;
+  my $socket = getSocket();
 
   print $socket "KEY q\n";
   $c->redirect_to('/');
@@ -65,6 +75,7 @@ __DATA__
 @@ index.html.ep
 % layout 'default';
 % title 'Welcome';
+<a href="/playing">Now playing</a>
 <% for(my $i = 0; $i < scalar @{$files}; $i++) { %>
   <a href="/play?id=<%= $i %>"><%= $files->[$i] %></a>
 <% } %>
