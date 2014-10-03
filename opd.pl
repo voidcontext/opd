@@ -29,27 +29,33 @@ while(1) {
   $connection->autoflush(1);
   while(my $line = <$connection>) {
     chomp $line;
-
-    if($line =~ /^OPEN\ (.+)/) {
-      if($player) {
-        print $player 'q';
-      	quitPlayer;
-      }
-      open($player, "|omxplayer -o hdmi $1")  || die "couldn't start omxplayer";
-      $player->autoflush();
-    } elsif($line =~ /^KEY (p|q)/) {
-      if($player) {
-      	print $player $1;
-      }
-      if($1 eq 'q') {
-        quitPlayer;
-      }
-    } elsif($line eq 'KEY right') {
-      # got this with `cat -vet`
-      print $player '^[[C';
-    } else {
-      #nop
+    eval {
+      processLine($line);
     }
+  }
+}
+
+sub processLine {
+  my $line = shift;
+  if($line =~ /^OPEN\ (.+)/) {
+    if($player) {
+      print $player 'q';
+      quitPlayer;
+    }
+    open($player, "|omxplayer -o hdmi $1")  || die "couldn't start omxplayer";
+    $player->autoflush();
+  } elsif($line =~ /^KEY (p|q)/) {
+    if($player) {
+      print $player $1;
+    }
+    if($1 eq 'q') {
+      quitPlayer;
+    }
+  } elsif($line eq 'KEY right') {
+    # got this with `cat -vet`
+    print $player '^[[C';
+  } else {
+    #nop
   }
 }
 
