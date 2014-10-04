@@ -33,7 +33,10 @@ get '/play' => sub {
   my $id = $c->param('id');
   my @files = qx{find $config->{root} -regextype posix-egrep -iregex '.*(mkv|avi)\$'};
 
-  $client->open($files[$id]);
+  my $file = $files[$id];
+
+  $file =~ s/\ /\\ /g;
+  $client->open($file);
 
   $c->redirect_to('/playing');
 };
