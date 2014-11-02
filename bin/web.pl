@@ -53,6 +53,13 @@ get '/pp' => sub {
   $c->redirect_to('/playing');
 };
 
+get '/sendkey' => sub {
+  my $c = shift;
+  
+  $client->send("KEY " . $c->param("key"));
+  $c->redirect_to('/playing');
+};
+
 get '/quit' => sub {
   my $c = shift;
 
@@ -80,6 +87,7 @@ Hopefully playing
 </p>
 <a href="/">Home</a>
 <a href="/pp">Play/Pause</a>
+<a href="/sendkey?key=k">Next audio stream</a>
 <a href="/quit">Quit</a>
 
 @@ pp.html.ep

@@ -66,7 +66,7 @@ sub processLine {
     }
     open($self->{player}, "|omxplayer -o hdmi $1")  || die "couldn't start omxplayer";
     $self->{player}->autoflush(1);
-  } elsif($line =~ /^KEY (p|q)/) {
+  } elsif($line =~ /^KEY (p|q|k)/) {
     if($self->{player}) {
       print {$self->{player}} $1;
     }
