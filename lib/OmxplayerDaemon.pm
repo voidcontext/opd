@@ -7,7 +7,13 @@ use strict;
 use IO::Socket::UNIX;
 use IO::Handle;
 
-use subs qw{quitPlayer};
+use subs qw{quitPlayer debug};
+
+sub debug {
+  if($ENV{DEBUG}) {
+    print "DEBUG: $_[0]\n";
+  }
+}
 
 sub new {
   my $class = shift;
@@ -35,6 +41,10 @@ sub init {
     Listen => 1,
   );
   $self->{socket}->autoflush(1);
+
+  $SIG{CHLD} = sub {
+    $self->cleanupChild();
+  };
 }
 
 sub listen {
@@ -45,10 +55,15 @@ sub listen {
     next unless my $connection = $socket->accept;
 
     $connection->autoflush(1);
+    debug "read connection";
     while(my $line = <$connection>) {
       chomp $line;
+      debug "process line";
       eval {
         $self->processLine($line);
+      };
+      if($@) {
+        print "$@\n";
       }
     }
   }
@@ -60,20 +75,23 @@ sub processLine {
   my $line = shift;
 
   if($line =~ /^OPEN\ (.+)/) {
+    debug "open player";
     if($self->{player}) {
-      print {$self->{player}} 'q';
       $self->quitPlayer;
     }
+    debug "open handler";
     open($self->{player}, "|omxplayer -o hdmi $1")  || die "couldn't start omxplayer";
     $self->{player}->autoflush(1);
+    debug "handler opened";
   } elsif($line =~ /^KEY (p|q|k)/) {
-    if($self->{player}) {
-      print {$self->{player}} $1;
-    }
+    debug "key -> $1";
     if($1 eq 'q') {
       $self->quitPlayer;
+    } elsif ($self->{player}) {
+      print {$self->{player}} $1;
     }
   } elsif($line eq 'KEY right') {
+    debug "key -> right";
     # got this with `cat -vet`
     print {$self->{player}} '^[[C';
   } else {
@@ -84,14 +102,26 @@ sub processLine {
 sub quitPlayer {
   my $self = shift;
 
+  debug "quit player";
   if($self->{player}) {
-    close $self->{player};
-    $self->{player} = undef;
+    debug "send 'q' key";
+    print {$self->{player}} 'q';
   }
+}
+
+sub cleanupChild {
+  my $self = shift;
+
+  debug "close handler";
+  close $self->{player};
+  $self->{player} = undef;
+  debug "player handler released";
 }
 
 sub cleanup {
   my $self = shift;
+
+  debug "cleanup";
 
   if($self->{player}) {
     close $self->{player};
