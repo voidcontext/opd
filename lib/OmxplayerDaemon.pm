@@ -80,7 +80,11 @@ sub processLine {
       $self->quitPlayer;
     }
     debug "open handler";
-    open($self->{player}, "|omxplayer -o hdmi $1")  || die "couldn't start omxplayer";
+    print "playing $1...\n";
+    my $file = $1;
+    $file =~ s/'/\\'/;
+    open($self->{player}, "|omxplayer -b -o hdmi $file")  || die "couldn't start omxplayer";
+
     $self->{player}->autoflush(1);
     debug "handler opened";
   } elsif($line =~ /^KEY (p|q|k)/) {

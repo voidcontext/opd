@@ -5,6 +5,7 @@ use Mojolicious::Lite;
 
 use JSON::PP;
 use File::Slurp;
+use File::Basename;
 
 use FindBin;
 use lib "$FindBin::Bin/../lib";
@@ -16,27 +17,33 @@ my $config = decode_json($json);
 
 my $client = new OmxplayerClient;
 
+my @files = ();
+my @labels = ();
+
+sub refreshDirs {
+  @files = sort {basename(dirname($a)) . basename($a) cmp basename(dirname($b)) . basename($b)} qx{find $config->{root} -regextype posix-egrep -iregex '.*(mkv|avi|mp4)\$' | grep -vi sample};
+  @labels = map {basename(dirname($_)).'/' . basename $_ } @files;
+
+}
+
+refreshDirs();
+
 # Documentation browser under "/perldoc"
 plugin 'PODRenderer';
 
 get '/' => sub {
   my $c = shift;
-  my @files = qx{find $config->{root} -regextype posix-egrep -iregex '.*(mkv|avi)\$'};
-
-  $c->stash(files => \@files);
+  $c->stash(files => \@files, labels => \@labels);
 
   $c->render('index');
 };
 
 get '/play' => sub {
   my $c = shift;
-  my $id = $c->param('id');
-  my @files = qx{find $config->{root} -regextype posix-egrep -iregex '.*(mkv|avi)\$'};
+  my $path = $c->param('path');
 
-  my $file = $files[$id];
-
-  $file =~ s/\ /\\ /g;
-  $client->open($file);
+  $path =~ s/\ /\\ /g;
+  $client->open($path);
 
   $c->redirect_to('/playing');
 };
@@ -44,6 +51,14 @@ get '/play' => sub {
 get '/playing' => sub {
   my $c = shift;
   $c->render;
+};
+
+get 'refresh' => sub {
+  my $c = shift;
+
+  refreshDirs();
+
+  $c->redirect_to('/');
 };
 
 get '/pp' => sub {
@@ -75,8 +90,9 @@ __DATA__
 % layout 'default';
 % title 'Welcome';
 <a href="/playing">Now playing</a>
+<a href="/refresh">Refresh</a>
 <% for(my $i = 0; $i < scalar @{$files}; $i++) { %>
-  <a href="/play?id=<%= $i %>"><%= $files->[$i] %></a>
+  <a href="/play?path=<%= $files->[$i] %>"><%= $labels->[$i] %></a>
 <% } %>
 
 @@ playing.html.ep
